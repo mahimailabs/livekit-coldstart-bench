@@ -27,7 +27,15 @@ light = (
 )
 heavy = (
     modal.Image.debian_slim(python_version="3.12")
-    .pip_install_from_requirements(str(AGENT_DIR / "requirements-heavy.txt"))
+    # requirements-heavy.txt starts with "-r requirements.txt", which Modal can't resolve
+    .pip_install_from_requirements(str(AGENT_DIR / "requirements.txt"))
+    .pip_install(
+        [
+            line
+            for line in (AGENT_DIR / "requirements-heavy.txt").read_text().splitlines()
+            if line and not line.startswith(("-r", "#"))
+        ]
+    )
     .env({"BENCH_PLATFORM": "modal", "BENCH_HEAVY": "1"})
     .add_local_dir(AGENT_DIR, "/agent", copy=True)
     .run_commands("cd /agent && python agent.py download-files")

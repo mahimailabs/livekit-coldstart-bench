@@ -38,6 +38,9 @@ async def entrypoint(ctx: JobContext) -> None:
     }
     await ctx.connect()
     await run_in_room(ctx.room, timings)
+    # end the session as soon as the caller leaves; otherwise it lingers until the room
+    # closes (~30 s on LiveKit Cloud) and counts against the plan's concurrency limit
+    ctx.shutdown(reason="caller left")
 
 
 if __name__ == "__main__":

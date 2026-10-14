@@ -101,6 +101,9 @@ async def one_run(platform: str, trigger_name: str, timeout: float, hold: float)
         result["error"] = repr(e)
     finally:
         await room.disconnect()
+        # delete the room so the agent session ends now, not after the empty timeout
+        async with api.LiveKitAPI() as lk:
+            await lk.room.delete_room(api.DeleteRoomRequest(room=room_name))
     return result
 
 

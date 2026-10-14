@@ -83,6 +83,8 @@ async def run_in_room(room: rtc.Room, timings: dict[str, float], max_call_s: flo
             await source.capture_frame(frame)
         for _ in range((1000 - 100) // FRAME_MS):
             await source.capture_frame(SILENCE)
+        if not room.isconnected():
+            break  # room deleted or connection lost; don't keep the container alive
         if callers() == 0:
             await asyncio.sleep(2)
             if callers() == 0:
