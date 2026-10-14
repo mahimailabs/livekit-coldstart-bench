@@ -38,7 +38,7 @@ First audio = trigger to the first audible frame the caller hears. p50 / p90.
 
 - **A registered worker is the only shape under 0.6 s every time.** The worker is already connected, so a call costs dispatch + connect.
 - **AgentCore "cold" is not a boot.** New sessions land on pre-booted microVMs whose process imported about 69 s before the invoke. A new session costs about 1 s.
-- **Modal cold is about 4.4 s, and imports are half of it.** Container start takes 1.7 s, then Python imports take 2.3 s. A memory snapshot saves 1.1 s (light) and 2.8 s (heavy), but its p90 is noisy.
+- **Modal cold is about 4.4 s, and most of it is Modal's own startup.** Container start 1.73 s, Modal runtime and app load 1.85 s, agent imports 0.46 s, connect 0.31 s, first audio 0.09 s. A memory snapshot saves 1.1 s (light) and 2.8 s (heavy), but its p90 is noisy.
 - **Cloud Run Jobs are not usable per call.** The container starts 27 s after `jobs execute`.
 - **LiveKit Cloud's Build plan never scaled to zero in 40 min idle**, so there is no cold number for it. It caps you at 5 concurrent sessions and queues dispatch number 6 for about 2 min.
 - **Cerebrium cannot scale a registered worker from zero.** `min_replicas = 0` is rejected for CPU scaling, and the worker gets no HTTP traffic to scale on.
