@@ -72,3 +72,65 @@ later are meaningful there.
 - `platforms/modal_app.py`: the heavy image installs `requirements.txt` and then the heavy
   extras, because Modal can't resolve the `-r requirements.txt` line.
 - Snapshot functions got 2 extra `snapshot-build` runs ahead of the full 20 (or 10) cold runs.
+
+# Round 2: notes (2026-10-14)
+
+Same harness host and LiveKit project. Images were built on AWS CodeBuild (amd64 and arm64) and
+copied to Artifact Registry with `crane`, because local Docker pulls hung on a credential-helper
+Keychain prompt and `gcloud builds submit` returned PERMISSION_DENIED for a project Owner.
+Spend: well under $1 (Cloud Run and Fargate about 15 min each at 2 vCPU / 4 GB, CodeBuild about
+10 min, Modal a few cents). Everything created in AWS and GCP was deleted afterwards.
+
+## Per-step medians (seconds after the trigger)
+
+| Platform | Label | Runs ok | Imports start | Imported | Job received | Connected | First audio |
+|---|---|---|---|---|---|---|---|
+| modal run_call | warm-gap5 | 20/20 | warm | warm | - | - | 0.67 |
+| cloudrun-job | cold | 10/10 | 27.19 | 28.55 | 28.55 | 29.05 | 29.10 |
+| cloudrun-pool | warm | 20/20 | warm | warm | 0.16 | 0.35 | 0.43 |
+| agentcore | cold (new session) | 20/20 | pre-booted | pre-booted | 0.67 | 0.98 | 1.01 |
+| agentcore | warm (same session) | 21/21 | warm | warm | 0.24 | 0.55 | 0.58 |
+| fargate | warm | 20/20 | warm | warm | 0.14 | 0.36 | 0.41 |
+
+The Cloud Run Job and AgentCore triggers go through `gcloud run jobs execute --async` and boto3
+`invoke_agent_runtime` (on a thread). Their client-side overhead is included.
+
+## Findings
+
+1. **Modal warm needs a gap longer than the agent's 2 s grace period.** At a 5 s gap, with the
+   linger fix, 20/20 calls reused one of 2 containers: p50 0.67 s, p90 0.88 s (round 1 at gap 0
+   was 4.01 s).
+2. **Cloud Run Jobs are not usable per call: 29 s to first audio.** The container starts about
+   27 s after `jobs execute`. Imports (1.1 s) and connecting (0.5 s) are noise next to that.
+   Under the Cloud Run sandbox `/proc` gives a wrong process start (about 9 min before the
+   trigger), so `import_start` is used instead.
+3. **The Cloud Run worker pool is the fastest warm path** together with Fargate: join 0.20 s,
+   first audio 0.43 s.
+4. **A Cloud Run worker pool redeploy drops the call for about 23 s.** Run twice. The old
+   instance logs "Shutting down user disabled instance" and the worker starts draining, then
+   the caller hears 22.9 s of silence. LiveKit then re-dispatches the job to the new revision
+   (`agent_joins: 2`), which plays a fresh greeting. The tick count (472-480 in 300 s, against
+   about 278-300 for one agent) suggests the old agent may come back or overlap. This needs
+   per-track tick logging to confirm.
+5. **AgentCore keeps pre-booted microVMs.** A new session (new `runtimeSessionId`) got first
+   audio at p50 1.01 s, but the process in it had imported about 69 s before the invoke, with
+   19 distinct processes for 20 sessions. So "cold" here means routing to a pre-initialized
+   microVM, not a boot. The very first invoke after the runtime was created took 1.64 s.
+   Reusing one session gave 0.58 s.
+6. **A Fargate rolling update drops the call for about 21 s.** On SIGTERM the worker drains
+   (drain timeout 3600 s), but ECS stops the task after its 30 s `stopTimeout`. LiveKit
+   re-dispatches the same job ID to the new task: 21.2 s gap, `agent_joins: 2`, 278 ticks.
+   Getting a real drain needs a `stopTimeout` raised to its 120 s maximum, which is still
+   shorter than a long call.
+7. The drain rows' agent timestamps come from the second (re-dispatched) agent, because its
+   timings packet replaces the first one.
+
+## Deviations
+
+- AgentCore received the LiveKit credentials as runtime environment variables. AgentCore has no
+  native secret injection, and the runtime was deleted after the runs. Fargate used Secrets
+  Manager, and Cloud Run used Secret Manager.
+- The AgentCore warm and cold triggers use boto3 with the `crt` extra, which the `aws login`
+  credential provider needs (`boto3[crt]==1.43.113`).
+- Fargate ran x86_64 (same image as Cloud Run); AgentCore runs arm64 (required).
+- Hold runs were 300 s, not 600 s.
