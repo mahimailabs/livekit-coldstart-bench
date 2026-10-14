@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>X race / ladder</title>
+<link rel="stylesheet" href="style.css">
+<style>#stage { width: 1200px; height: 675px; }</style>
+</head>
+<body>
+<div id="stage"><svg id="s" width="1200" height="675" viewBox="0 0 1200 675"></svg></div>
+<script src="node_modules/roughjs/bundled/rough.js"></script>
+<script src="common.js"></script>
+<script>
+// 16:9 cut of the README race for X. ?ladder=1 renders the finished chart, coloured warm vs cold.
+(async () => {
+await fontsReady();
+const ladder = new URLSearchParams(location.search).get("ladder") === "1";
+const { svg, rc, o, hf, add, T, group } = setup("s", ladder ? 9 : 5);
+const W = [C.green, C.greenF], K = [C.orange, C.orangeF];
+// first audio p50 in seconds (results/NOTES.md)
+const ROWS = [
+  ["Fargate worker", 0.41, "warm", C.green, C.greenF],
+  ["Cloud Run worker pool", 0.43, "warm", C.green, C.greenF],
+  ["Cerebrium worker", 0.44, "warm", C.green, C.greenF],
+  ["LiveKit Cloud", 0.58, "warm", C.green, C.greenF],
+  ["AgentCore, same session", 0.58, "warm", C.teal, C.tealF],
+  ["Modal, warm container", 0.67, "warm", C.violet, C.violetF],
+  ["AgentCore, new session", 1.01, "cold", C.teal, C.tealF],
+  ["Modal + snapshot", 3.36, "cold", C.yellow, C.yellowF],
+  ["Modal", 4.44, "cold", C.yellow, C.yellowF],
+  ["Modal + Silero VAD", 8.09, "cold", C.orange, C.orangeF],
+  ["Cloud Run Job", 29.1, "cold", C.red, C.redF],
+].map((r) => ladder ? [r[0], r[1], r[2], ...(r[2] === "warm" ? W : (r[1] > 20 ? [C.red, C.redF] : K))] : r);
+const X0 = 330, X1 = 1010, LO = 0.2, HI = 40, Y0 = 140, DY = 43, BH = 28;
+const sx = (v) => X0 + Math.log(Math.max(v, LO) / LO) / Math.log(HI / LO) * (X1 - X0);
+
+T(null, 40, 66, ladder ? "Time to first word" : "Race to first word", { anchor: "start", size: 50, weight: 700 });
+T(null, 40, 104, "same LiveKit agent, trigger → first audible frame, p50", { anchor: "start", size: 23, cls: "m" });
+const clock = T(null, 1162, 76, ladder ? "" : "0 ms", { anchor: "end", size: 50, weight: 700, fill: C.yellow });
+if (ladder) {
+  T(null, 1162, 62, "warm", { anchor: "end", size: 26, weight: 700, fill: C.green });
+  T(null, 1162, 96, "cold", { anchor: "end", size: 26, weight: 700, fill: C.orange });
+}
+
+const AY = Y0 + ROWS.length * DY + 2;
+add(null, rc.line(X0, AY, X1 + 20, AY, o({ stroke: C.muted, strokeWidth: 1.4, roughness: 0.8 })));
+[0.25, 0.5, 1, 2, 5, 10, 30].forEach((v) => {
+  const x = sx(v);
+  add(null, rc.line(x, AY - 6, x, AY + 6, o({ stroke: C.muted, strokeWidth: 1.4 })));
+  T(null, x, AY + 28, v < 1 ? `${v * 1000} ms` : `${v} s`, { size: 19, cls: "m" });
+});
+const XS = sx(1);
+add(null, rc.line(XS, Y0 - 12, XS, AY, o({ stroke: C.blue, strokeWidth: 1.2, strokeLineDash: [6, 8], roughness: 0.6 })));
+
+const bars = ROWS.map(([name, v, kind, col, fill], i) => {
+  const y = Y0 + i * DY;
+  T(null, X0 - 16, y + BH / 2 + 8, name, { anchor: "end", size: 23 });
+  const g = group();
+  add(g, rc.rectangle(X0, y, sx(v) - X0, BH, o({ stroke: col, ...hf(fill), roughness: 1.1 })));
+  const cp = document.createElementNS(NS, "clipPath"); cp.id = "c" + i;
+  const r = document.createElementNS(NS, "rect");
+  r.setAttribute("x", X0 - 10); r.setAttribute("y", y - 10); r.setAttribute("height", BH + 20); r.setAttribute("width", 0);
+  cp.appendChild(r); svg.appendChild(cp); g.setAttribute("clip-path", `url(#c${i})`);
+  const lab = group();
+  T(lab, sx(v) + 12, y + BH / 2 + 9, v < 1 ? `${Math.round(v * 1000)} ms` : `${v.toFixed(v < 10 ? 2 : 1)} s`,
+    { anchor: "start", size: 25, weight: 700, fill: col });
+  lab.setAttribute("opacity", 0);
+  return { v, r, lab };
+});
+
+const R0 = 0.5, R1 = 7.5, END = 30, DURATION = 11.0;
+const clockAt = (t) => t < R0 ? 0 : LO * Math.pow(END / LO, Math.min(1, (t - R0) / (R1 - R0)));
+function setT(t) {
+  const c = ladder ? HI : clockAt(t);
+  if (!ladder) clock.textContent = c < 1 ? `${Math.round(c * 1000)} ms` : `${c.toFixed(c < 10 ? 2 : 1)} s`;
+  for (const b of bars) {
+    b.r.setAttribute("width", c <= 0 ? 0 : sx(Math.min(c, b.v)) - X0 + 10);
+    b.lab.setAttribute("opacity", c >= b.v ? Math.min(1, Math.log(c / b.v) / 0.02) : 0);
+  }
+  svg.style.opacity = ladder ? 1 : 1 - Math.max(0, Math.min(1, (t - (DURATION - 0.5)) / 0.5));
+}
+window.setT = setT; window.DURATION = DURATION;
+setT(ladder ? 0 : (location.hash ? parseFloat(location.hash.slice(1)) : DURATION - 1));
+window.ready = true;
+})();
+</script>
+</body>
+</html>

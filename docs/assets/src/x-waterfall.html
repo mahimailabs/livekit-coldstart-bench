@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>X waterfall</title>
+<link rel="stylesheet" href="style.css">
+<style>#stage { width: 1200px; height: 675px; }</style>
+</head>
+<body>
+<div id="stage"><svg id="s" width="1200" height="675" viewBox="0 0 1200 675"></svg></div>
+<script src="node_modules/roughjs/bundled/rough.js"></script>
+<script src="common.js"></script>
+<script>
+// Where the time goes, p50 step medians from results/*.jsonl (agent timestamps minus trigger).
+(async () => {
+await fontsReady();
+const { rc, o, hf, add, T } = setup("s", 61);
+T(null, 40, 66, "Where the time goes", { anchor: "start", size: 50, weight: 700 });
+T(null, 40, 104, "p50 seconds from trigger, per step", { anchor: "start", size: 23, cls: "m" });
+
+const STEP = {
+  sched: ["platform starts it", C.red, C.redF],
+  boot: ["Modal runtime + app", C.orange, C.orangeF],
+  imp: ["agent imports", C.yellow, C.yellowF],
+  disp: ["dispatch", C.blue, C.blueF],
+  conn: ["connect", C.violet, C.violetF],
+  audio: ["first audio", C.green, C.greenF],
+};
+const ROWS = {
+  job: ["Cloud Run Job", [["sched", 27.19], ["imp", 1.36], ["conn", 0.5], ["audio", 0.05]]],
+  modal: ["Modal, cold", [["sched", 1.73], ["boot", 1.85], ["imp", 0.46], ["conn", 0.31], ["audio", 0.09]]],
+  warm: ["Fargate worker", [["disp", 0.14], ["conn", 0.22], ["audio", 0.05]]],
+};
+function lane(y, row, X0, X1, max, labelMin) {
+  const [name, steps] = row;
+  const sx = (s) => X0 + (s / max) * (X1 - X0);
+  T(null, X0 - 16, y + 30, name, { anchor: "end", size: 25, weight: 700 });
+  let t = 0;
+  for (const [k, d] of steps) {
+    const [lab, col, fill] = STEP[k];
+    const a = sx(t), b = sx(t + d);
+    add(null, rc.rectangle(a, y, Math.max(3, b - a), 44, o({ stroke: col, ...hf(fill), roughness: 1 })));
+    if (b - a > labelMin) T(null, (a + b) / 2, y + 30, `${d.toFixed(d < 1 ? 2 : 1)} s`, { size: 21, weight: 700, fill: col });
+    t += d;
+  }
+  T(null, sx(t) + 12, y + 31, `${t.toFixed(2)} s`, { anchor: "start", size: 24, weight: 700, fill: C.ink });
+  return sx;
+}
+// full scale: the job dwarfs everything
+T(null, 40, 158, "full scale, 0 to 30 s", { anchor: "start", size: 20, fill: C.muted });
+lane(178, ROWS.job, 260, 1080, 30, 60);
+lane(240, ROWS.modal, 260, 1080, 30, 1e9);
+lane(302, ROWS.warm, 260, 1080, 30, 1e9);
+// zoom
+add(null, rc.line(40, 372, 1160, 372, o({ stroke: C.dim, strokeWidth: 1.6, strokeLineDash: [8, 9] })));
+T(null, 40, 404, "zoom, 0 to 5 s", { anchor: "start", size: 20, fill: C.muted });
+const sz = lane(424, ROWS.modal, 260, 1080, 5, 70);
+lane(492, ROWS.warm, 260, 1080, 5, 70);
+add(null, rc.line(260, 552, 1080, 552, o({ stroke: C.muted, strokeWidth: 1.3, roughness: 0.8 })));
+[0, 1, 2, 3, 4, 5].forEach((s) => T(null, sz(s), 578, `${s} s`, { size: 18, cls: "m" }));
+// legend
+let lx = 40;
+for (const k of ["sched", "boot", "imp", "disp", "conn", "audio"]) {
+  const [lab, col, fill] = STEP[k];
+  add(null, rc.rectangle(lx, 616, 22, 22, o({ stroke: col, ...hf(fill, "solid"), roughness: 0.8 })));
+  const t = T(null, lx + 30, 634, lab, { anchor: "start", size: 20, fill: col });
+  lx += 30 + t.getComputedTextLength() + 34;
+}
+window.ready = true;
+})();
+</script>
+</body>
+</html>

@@ -1,10 +1,10 @@
-"""Download the Kalam and JetBrains Mono latin subsets (OFL) used by the diagrams into fonts/."""
+"""Download the Kalam, JetBrains Mono and Anton latin subsets (OFL) used by the diagrams into fonts/."""
 
 import re
 import urllib.request
 from pathlib import Path
 
-CSS = "https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=JetBrains+Mono:wght@500"
+CSS = "https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=JetBrains+Mono:wght@500&family=Anton"
 UA = "Mozilla/5.0 (Macintosh) AppleWebKit/537.36 Chrome/120 Safari/537.36"
 
 req = urllib.request.Request(CSS, headers={"User-Agent": UA})
@@ -24,7 +24,9 @@ for blk in re.findall(r"/\* latin \*/\s*@font-face\s*\{(.*?)\}", css, re.S):
     weight = field(r"font-weight: (\d+)", blk)
     src = field(r"url\((.*?)\)", blk)
     # only write the files we expect, only from Google's font CDN
-    if fam not in ("Kalam", "JetBrainsMono") or not src.startswith("https://fonts.gstatic.com/"):
+    if fam not in ("Kalam", "JetBrainsMono", "Anton") or not src.startswith(
+        "https://fonts.gstatic.com/"
+    ):
         raise ValueError(f"unexpected font entry: {fam} {src}")
     out = Path("fonts") / f"{fam}-{weight}.woff2"
     urllib.request.urlretrieve(src, out)
