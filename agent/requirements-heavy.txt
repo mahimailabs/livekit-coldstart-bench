@@ -1,0 +1,2 @@
+-r requirements.txt
+livekit-plugins-silero==1.8.6

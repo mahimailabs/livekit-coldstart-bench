@@ -1,0 +1,16 @@
+[project]
+name = "livekit-coldstart-bench"
+version = "0.1.0"
+description = "Cold-start and drain benchmark for LiveKit agents across serverless platforms"
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
