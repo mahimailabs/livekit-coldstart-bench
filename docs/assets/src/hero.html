@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>livekit-coldstart-bench hero</title>
+<link rel="stylesheet" href="style.css">
+<style>#stage { width: 1280px; height: 740px; }</style>
+</head>
+<body>
+<div id="stage"><svg id="s" width="1280" height="740" viewBox="0 0 1280 740"></svg></div>
+<script src="node_modules/roughjs/bundled/rough.js"></script>
+<script src="common.js"></script>
+<script>
+// A race to first audio: a log-scale clock runs from 0.2 s to 40 s and every bar stops at its p50.
+(async () => {
+await fontsReady();
+const { svg, rc, o, hf, add, T, group } = setup("s", 5);
+// first audio p50 in seconds (results/NOTES.md, rounds 1 and 2)
+const ROWS = [
+  ["Fargate worker", 0.41, "warm", C.green, C.greenF],
+  ["Cloud Run worker pool", 0.43, "warm", C.green, C.greenF],
+  ["Cerebrium worker", 0.44, "warm", C.green, C.greenF],
+  ["Mac worker (floor)", 0.55, "warm", C.muted, C.dim],
+  ["LiveKit Cloud", 0.58, "warm", C.green, C.greenF],
+  ["AgentCore, same session", 0.58, "warm", C.teal, C.tealF],
+  ["Modal, warm container", 0.67, "warm", C.violet, C.violetF],
+  ["AgentCore, new session", 1.01, "cold", C.teal, C.tealF],
+  ["Modal + snapshot", 3.36, "cold", C.yellow, C.yellowF],
+  ["Modal", 4.44, "cold", C.yellow, C.yellowF],
+  ["Modal, heavy image", 8.09, "cold", C.orange, C.orangeF],
+  ["Cloud Run Job", 29.1, "cold", C.red, C.redF],
+];
+const X0 = 360, X1 = 1130, LO = 0.2, HI = 40, Y0 = 170, DY = 40, BH = 26;
+const sx = (v) => X0 + Math.log(Math.max(v, LO) / LO) / Math.log(HI / LO) * (X1 - X0);
+
+T(null, 48, 82, "Race to first audio", { anchor: "start", size: 52, weight: 700 });
+T(null, 48, 120, "one LiveKit agent on every platform: trigger → first audible frame, p50", { anchor: "start", size: 22, cls: "m" });
+const clock = T(null, 1232, 92, "0.00 s", { anchor: "end", size: 46, weight: 700, fill: C.yellow });
+
+// axis
+const AY = Y0 + ROWS.length * DY + 4;
+add(null, rc.line(X0, AY, X1 + 20, AY, o({ stroke: C.muted, strokeWidth: 1.4, roughness: 0.8 })));
+[0.25, 0.5, 1, 2, 5, 10, 30].forEach((v) => {
+  const x = sx(v);
+  add(null, rc.line(x, AY - 6, x, AY + 6, o({ stroke: C.muted, strokeWidth: 1.4 })));
+  T(null, x, AY + 30, v < 1 ? `${v * 1000} ms` : `${v} s`, { size: 18, cls: "m" });
+});
+// one-second "feels instant" line
+const XS = sx(1);
+add(null, rc.line(XS, Y0 - 24, XS, AY, o({ stroke: C.blue, strokeWidth: 1.2, strokeLineDash: [6, 8], roughness: 0.6 })));
+T(null, XS + 8, Y0 - 30, "1 s", { anchor: "start", size: 17, fill: C.blue });
+
+const bars = ROWS.map(([name, v, kind, col, fill], i) => {
+  const y = Y0 + i * DY;
+  T(null, X0 - 18, y + BH / 2 + 7, name, { anchor: "end", size: 21, fill: kind === "cold" ? C.ink : C.ink });
+  const g = group();
+  add(g, rc.rectangle(X0, y, sx(v) - X0, BH, o({ stroke: col, ...hf(fill), roughness: 1.1 })));
+  const cp = document.createElementNS(NS, "clipPath"); cp.id = "c" + i;
+  const r = document.createElementNS(NS, "rect");
+  r.setAttribute("x", X0 - 10); r.setAttribute("y", y - 10); r.setAttribute("height", BH + 20); r.setAttribute("width", 0);
+  cp.appendChild(r); svg.appendChild(cp); g.setAttribute("clip-path", `url(#c${i})`);
+  const lab = group();
+  T(lab, sx(v) + 14, y + BH / 2 + 7, v < 1 ? `${Math.round(v * 1000)} ms` : `${v.toFixed(v < 10 ? 2 : 1)} s`,
+    { anchor: "start", size: 22, weight: 700, fill: col });
+  const tag = T(lab, sx(v) + 112, y + BH / 2 + 6, kind, { anchor: "start", size: 15, cls: "mono" });
+  tag.style.fill = kind === "warm" ? C.green : C.orange;
+  lab.setAttribute("opacity", 0);
+  return { v, r, lab };
+});
+
+// legend
+T(null, 48, 726, "warm = agent already running   ·   cold = platform starts a process for the call   ·   platforms in us-east, harness on a Mac in Ontario",
+  { anchor: "start", size: 17, cls: "m" });
+
+const R0 = 0.6, R1 = 8.8, END = 30, DURATION = 13.0;
+const clockAt = (t) => t < R0 ? 0 : LO * Math.pow(END / LO, Math.min(1, (t - R0) / (R1 - R0)));
+function setT(t) {
+  const c = clockAt(t);
+  clock.textContent = c < 1 ? `${Math.round(c * 1000)} ms` : `${c.toFixed(c < 10 ? 2 : 1)} s`;
+  for (const b of bars) {
+    const w = c <= 0 ? 0 : sx(Math.min(c, b.v)) - X0 + 10;
+    b.r.setAttribute("width", Math.max(0, w));
+    const k = c >= b.v ? Math.min(1, Math.log(c / b.v) / 0.02) : 0;
+    b.lab.setAttribute("opacity", k);
+  }
+  const out = Math.max(0, Math.min(1, (t - (DURATION - 0.6)) / 0.6));
+  svg.style.opacity = 1 - out;
+}
+window.setT = setT; window.DURATION = DURATION;
+setT(location.hash ? parseFloat(location.hash.slice(1)) : DURATION - 1);
+window.ready = true;
+})();
+</script>
+</body>
+</html>

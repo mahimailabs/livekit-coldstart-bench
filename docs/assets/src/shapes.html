@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>livekit-coldstart-bench shapes</title>
+<link rel="stylesheet" href="style.css">
+<style>#stage { width: 1280px; height: 620px; }</style>
+</head>
+<body>
+<div id="stage"><svg id="s" width="1280" height="620" viewBox="0 0 1280 620"></svg></div>
+<script src="node_modules/roughjs/bundled/rough.js"></script>
+<script src="common.js"></script>
+<script>
+// The two deployment shapes the benchmark covers, side by side.
+(async () => {
+await fontsReady();
+const { rc, o, hf, add, T, arrow, box } = setup("s", 21);
+T(null, 640, 62, "Two ways to run the same agent", { size: 42, weight: 700 });
+
+// divider
+add(null, rc.line(640, 100, 640, 590, o({ stroke: C.dim, strokeWidth: 2, strokeLineDash: [8, 10] })));
+
+// ---- left: registered worker ----
+T(null, 320, 124, "registered worker", { size: 30, weight: 700, fill: C.green });
+T(null, 320, 152, "agent.py start, always connected", { size: 18, cls: "m" });
+box(null, 60, 200, 210, 80, C.blue, C.blueF, "harness", "caller + dispatch");
+box(null, 370, 200, 210, 80, C.violet, C.violetF, "LiveKit", "room + dispatch");
+box(null, 370, 380, 210, 92, C.green, C.greenF, "worker", "idle process pool");
+arrow(null, 272, 226, 366, 226, { stroke: C.muted });
+T(null, 318, 214, "dispatch", { size: 16, cls: "m" });
+arrow(null, 450, 284, 450, 376, { stroke: C.green });
+T(null, 440, 336, "job", { anchor: "end", size: 17, fill: C.green });
+add(null, rc.line(500, 376, 500, 286, o({ stroke: C.muted, strokeWidth: 1.4, strokeLineDash: [5, 7] })));
+T(null, 512, 336, "websocket, dialled out", { anchor: "start", size: 15, cls: "m" });
+T(null, 320, 520, "LiveKit Cloud · Cerebrium · Cloud Run worker pool · Fargate", { size: 18 });
+add(null, rc.rectangle(195, 545, 250, 36, o({ stroke: C.green, strokeWidth: 1.4, ...hf(C.greenF, "solid") })));
+T(null, 320, 570, "first audio 0.41 to 0.58 s", { size: 20, weight: 700, fill: C.green });
+
+// ---- right: one container per call ----
+T(null, 960, 124, "one container per call", { size: 30, weight: 700, fill: C.orange });
+T(null, 960, 152, "oneshot.py, starts for one room and exits", { size: 18, cls: "m" });
+box(null, 700, 200, 210, 80, C.blue, C.blueF, "harness", "caller + trigger");
+box(null, 1010, 200, 210, 80, C.yellow, C.yellowF, "platform", "spawn / invoke / execute");
+box(null, 1010, 380, 210, 92, C.orange, C.orangeF, "container", "boot → import → join");
+box(null, 700, 380, 210, 92, C.violet, C.violetF, "LiveKit", "room");
+arrow(null, 912, 226, 1006, 226, { stroke: C.muted });
+T(null, 958, 214, "trigger", { size: 16, cls: "m" });
+arrow(null, 1115, 284, 1115, 376, { stroke: C.orange });
+T(null, 1125, 336, "cold start", { anchor: "start", size: 17, fill: C.orange });
+arrow(null, 1006, 426, 914, 426, { stroke: C.orange });
+T(null, 960, 414, "join", { size: 16, cls: "m" });
+T(null, 960, 520, "Modal · AgentCore · Cloud Run Job", { size: 18 });
+add(null, rc.rectangle(820, 545, 280, 36, o({ stroke: C.orange, strokeWidth: 1.4, ...hf(C.orangeF, "solid") })));
+T(null, 960, 570, "first audio 1.0 to 29 s cold", { size: 20, weight: 700, fill: C.orange });
+window.ready = true;
+})();
+</script>
+</body>
+</html>
