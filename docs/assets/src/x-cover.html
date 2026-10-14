@@ -4,30 +4,25 @@
 <meta charset="utf-8">
 <title>X cover</title>
 <style>
-@font-face { font-family: Anton; src: url(fonts/Anton-400.woff2) format("woff2"); }
+@font-face { font-family: Kalam; font-weight: 700; src: url(fonts/Kalam-700.woff2) format("woff2"); }
 html, body { margin: 0; }
-/* flat electric yellow, black type filling the frame (mahimai-x-image layout A) */
-#stage { background: #FFE500; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
-.head { font-family: Anton, sans-serif; color: #000; line-height: 0.9; letter-spacing: -0.01em; white-space: nowrap; }
-.two { color: #E6006E; }
+/* black field, hand-written white text with one blue phrase */
+#stage { background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+#h { font-family: Kalam, cursive; font-weight: 700; color: #fff; white-space: nowrap; line-height: 1; }
+#h span { color: #4aa8ff; }
 </style>
 </head>
 <body>
-<div id="stage"><div class="head" id="h">livekit-agents</div><div class="head two" id="u">cold start</div></div>
+<div id="stage"><div id="h">livekit-agents <span>cold start</span></div></div>
 <script>
-// ?w=1600&h=900 sets the frame; text is sized to fill ~92% of the width.
+// ?w=1600&h=900 sets the frame; the line spans ~78% of the width.
 (async () => {
 const q = new URLSearchParams(location.search), W = +(q.get("w") || 1600), H = +(q.get("h") || 900);
 const st = document.getElementById("stage"); st.style.width = W + "px"; st.style.height = H + "px";
-await document.fonts.load("100px Anton");
-const fit = (el, frac, maxH) => {
-  el.style.fontSize = "100px";
-  const s = Math.min((W * frac) / el.scrollWidth, maxH / el.offsetHeight) * 100;
-  el.style.fontSize = s + "px";
-};
-fit(document.getElementById("h"), 0.86, H * 0.34);
-fit(document.getElementById("u"), 0.86, H * 0.34);
-document.getElementById("u").style.marginTop = H * 0.08 + "px";
+await document.fonts.load("700 100px Kalam");
+const el = document.getElementById("h");
+el.style.fontSize = "100px";
+el.style.fontSize = Math.min((W * 0.78) / el.scrollWidth, (H * 0.3) / el.offsetHeight) * 100 + "px";
 window.ready = true;
 })();
 </script>
