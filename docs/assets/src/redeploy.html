@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>livekit-coldstart-bench redeploy</title>
+<link rel="stylesheet" href="style.css">
+<style>#stage { width: 1280px; height: 560px; }</style>
+</head>
+<body>
+<div id="stage"><svg id="s" width="1280" height="560" viewBox="0 0 1280 560"></svg></div>
+<script src="node_modules/roughjs/bundled/rough.js"></script>
+<script src="common.js"></script>
+<script>
+// What the caller hears when the platform redeploys mid-call (hold runs in results/).
+(async () => {
+await fontsReady();
+const { rc, o, hf, add, T } = setup("s", 41);
+T(null, 640, 60, "Redeploy in the middle of a call", { size: 42, weight: 700 });
+T(null, 640, 94, "caller holds a 5 to 10 min call, the platform redeploys about 60 s in (gaps measured, positions approximate)", { size: 20, cls: "m" });
+
+const X0 = 330, X1 = 1220, SPAN = 160; // seconds shown
+const sx = (s) => X0 + (s / SPAN) * (X1 - X0);
+const RD = 60;
+const lanes = [
+  { name: "Cerebrium", note: "old replica drains", col: C.green, fill: C.greenF, gap: null },
+  { name: "Cloud Run worker pool", note: "SIGTERM, then re-dispatch", col: C.red, fill: C.redF, gap: [RD + 9, RD + 9 + 23] },
+  { name: "Fargate", note: "killed at stopTimeout 30 s", col: C.red, fill: C.redF, gap: [RD + 30, RD + 30 + 21] },
+];
+// redeploy marker
+add(null, rc.line(sx(RD), 128, sx(RD), 470, o({ stroke: C.yellow, strokeWidth: 2, strokeLineDash: [7, 8], roughness: 0.7 })));
+T(null, sx(RD), 124, "redeploy", { size: 20, weight: 700, fill: C.yellow });
+
+lanes.forEach((L, i) => {
+  const y = 170 + i * 110;
+  T(null, X0 - 22, y + 24, L.name, { anchor: "end", size: 24, weight: 700 });
+  T(null, X0 - 22, y + 50, L.note, { anchor: "end", size: 15, cls: "m" });
+  // greeting at the start, then a tick every 2 s (drawn sparser than the real 1 s ticks)
+  const tick = (s, big) => add(null, rc.rectangle(sx(s), y + (big ? 6 : 14), big ? sx(s + 3) - sx(s) : 5, big ? 34 : 18,
+    o({ stroke: L.gap ? C.ink : C.green, strokeWidth: 1.2, ...hf(L.gap ? C.dim : C.greenF, "solid"), roughness: 0.8 })));
+  tick(0, true);
+  for (let s = 4; s < SPAN; s += 2) {
+    if (L.gap && s >= L.gap[0] && s < L.gap[1]) continue;
+    tick(s, false);
+  }
+  if (L.gap) {
+    const [a, b] = L.gap;
+    add(null, rc.rectangle(sx(a), y + 2, sx(b) - sx(a), 42, o({ stroke: C.red, ...hf(C.redF) })));
+    T(null, (sx(a) + sx(b)) / 2, y + 30, `${b - a} s`, { size: 22, weight: 700, fill: C.red });
+    tick(b + 0.5, true);
+    T(null, sx(b + 2), y + 66, "new agent, fresh greeting", { anchor: "start", size: 15, fill: C.red });
+  } else {
+    T(null, sx(RD + 4), y + 66, "no gap: 599 ticks in 600 s", { anchor: "start", size: 15, fill: C.green });
+  }
+});
+// time axis
+add(null, rc.line(X0, 488, X1, 488, o({ stroke: C.muted, strokeWidth: 1.4, roughness: 0.8 })));
+[0, 30, 60, 90, 120, 150].forEach((s) => { T(null, sx(s), 514, `${s} s`, { size: 17, cls: "m" }); });
+T(null, 640, 546, "Only the platform that waits for the call to end keeps it. The others hand it back to LiveKit, which re-dispatches.",
+  { size: 18, cls: "m" });
+window.ready = true;
+})();
+</script>
+</body>
+</html>
