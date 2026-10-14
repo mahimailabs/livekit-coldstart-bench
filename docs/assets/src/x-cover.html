@@ -9,11 +9,11 @@ html, body { margin: 0; }
 /* flat electric yellow, black type filling the frame (mahimai-x-image layout A) */
 #stage { background: #FFE500; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
 .head { font-family: Anton, sans-serif; color: #000; line-height: 0.9; letter-spacing: -0.01em; white-space: nowrap; }
-.sub { font-family: Anton, sans-serif; color: #000; text-transform: uppercase; letter-spacing: 0.16em; opacity: 0.85; white-space: nowrap; }
+.two { color: #E6006E; }
 </style>
 </head>
 <body>
-<div id="stage"><div class="head" id="h">0.4 s vs 29 s</div><div class="sub" id="u">Same LiveKit voice agent. 6 platforms. Time to first word.</div></div>
+<div id="stage"><div class="head" id="h">livekit-agents</div><div class="head two" id="u">cold start</div></div>
 <script>
 // ?w=1600&h=900 sets the frame; text is sized to fill ~92% of the width.
 (async () => {
@@ -25,9 +25,9 @@ const fit = (el, frac, maxH) => {
   const s = Math.min((W * frac) / el.scrollWidth, maxH / el.offsetHeight) * 100;
   el.style.fontSize = s + "px";
 };
-fit(document.getElementById("h"), 0.92, H * 0.62);
-fit(document.getElementById("u"), 0.86, H * 0.075);
-document.getElementById("u").style.marginTop = H * 0.04 + "px";
+fit(document.getElementById("h"), 0.86, H * 0.34);
+fit(document.getElementById("u"), 0.86, H * 0.34);
+document.getElementById("u").style.marginTop = H * 0.08 + "px";
 window.ready = true;
 })();
 </script>
