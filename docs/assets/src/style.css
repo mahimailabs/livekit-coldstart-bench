@@ -1,0 +1,12 @@
+@font-face { font-family: Kalam; font-weight: 400; src: url(fonts/Kalam-400.woff2) format("woff2"); }
+@font-face { font-family: Kalam; font-weight: 700; src: url(fonts/Kalam-700.woff2) format("woff2"); }
+@font-face { font-family: JBM; font-weight: 500; src: url(fonts/JetBrainsMono-500.woff2) format("woff2"); }
+html, body { margin: 0; background: #0d1117; }
+#stage {
+  position: relative; overflow: hidden; background: #0d1117;
+  background-image: radial-gradient(#1f2633 1.3px, transparent 1.3px); background-size: 24px 24px;
+}
+svg { position: absolute; inset: 0; }
+text { font-family: Kalam, cursive; fill: #e6edf3; }
+.m { fill: #8b949e; }
+.mono { font-family: JBM, monospace; font-size: 15px; fill: #8b949e; }
