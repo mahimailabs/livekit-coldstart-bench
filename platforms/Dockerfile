@@ -3,7 +3,8 @@
 #   docker build -f platforms/Dockerfile --build-arg HEAVY=1 -t lk-bench:heavy .
 # CMD runs a registered worker; per-call platforms override it with
 #   python oneshot.py   (reads BENCH_ROOM)
-FROM python:3.12-slim
+ARG BASE=python:3.12-slim
+FROM ${BASE}
 ARG HEAVY=0
 ENV BENCH_HEAVY=${HEAVY} UV_COMPILE_BYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app

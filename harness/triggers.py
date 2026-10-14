@@ -45,7 +45,9 @@ async def agentcore_invoke(room: str) -> None:
         # returns only when the session ends, so fire it on a thread and move on
         client.invoke_agent_runtime(
             agentRuntimeArn=os.environ["BENCH_AGENTCORE_ARN"],
-            runtimeSessionId=f"{room}-{'x' * max(0, 33 - len(room))}",
+            # BENCH_AGENTCORE_SESSION reuses one session (warm microVM); default is one per call
+            runtimeSessionId=os.getenv("BENCH_AGENTCORE_SESSION")
+            or f"{room}-{'x' * max(0, 33 - len(room))}",
             payload=json.dumps({"room": room}).encode(),
         )
 

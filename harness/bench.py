@@ -50,6 +50,8 @@ async def one_run(platform: str, trigger_name: str, timeout: float, hold: float)
 
     @room.on("participant_connected")
     def _on_join(p: rtc.RemoteParticipant) -> None:
+        if p.kind == rtc.ParticipantKind.PARTICIPANT_KIND_AGENT:
+            result["agent_joins"] = result.get("agent_joins", 0) + 1
         if p.kind == rtc.ParticipantKind.PARTICIPANT_KIND_AGENT and not joined.is_set():
             result["t_join"] = time.time()
             joined.set()
@@ -95,6 +97,9 @@ async def one_run(platform: str, trigger_name: str, timeout: float, hold: float)
             result["ticks"] = len(ticks)
             result["last_tick_s"] = round(ticks[-1] - result["t_audio"], 1) if ticks else None
             result["survived"] = bool(ticks) and time.time() - ticks[-1] < 3
+            # a redeploy that kills the agent and re-dispatches shows up as a long silence
+            gaps = [b - a for a, b in zip(ticks, ticks[1:], strict=False)]
+            result["max_tick_gap_s"] = round(max(gaps), 1) if gaps else None
     except asyncio.TimeoutError:
         result["error"] = f"no agent audio within {timeout}s"
     except Exception as e:  # recorded, not raised: one bad run shouldn't end the batch
