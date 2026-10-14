@@ -97,6 +97,10 @@ python summarize.py results.jsonl
 
 Deploy files per platform are in [`platforms/`](platforms). Set `LIVEKIT_AGENT_NAME_OVERRIDE` and `BENCH_AGENT_NAME` when two workers share a project. Rebuild the visuals with [`docs/assets/src/render.mjs`](docs/assets/src/render.mjs).
 
+## Roadmap and contributing
+
+Six platforms are covered so far. What's next is in [ROADMAP.md](ROADMAP.md), and [CONTRIBUTING.md](CONTRIBUTING.md) shows how to add a platform in five steps.
+
 ## Cost
 
 About $2 for everything above: Modal $1.02 (mostly a now-fixed bug that kept containers alive), Cerebrium, Cloud Run, Fargate, CodeBuild and AgentCore well under $1 combined, LiveKit Cloud $0 on the Build plan.
