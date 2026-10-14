@@ -23,6 +23,9 @@ for blk in re.findall(r"/\* latin \*/\s*@font-face\s*\{(.*?)\}", css, re.S):
     fam = field(r"font-family: '([^']+)'", blk).replace(" ", "")
     weight = field(r"font-weight: (\d+)", blk)
     src = field(r"url\((.*?)\)", blk)
+    # only write the files we expect, only from Google's font CDN
+    if fam not in ("Kalam", "JetBrainsMono") or not src.startswith("https://fonts.gstatic.com/"):
+        raise ValueError(f"unexpected font entry: {fam} {src}")
     out = Path("fonts") / f"{fam}-{weight}.woff2"
     urllib.request.urlretrieve(src, out)
     print(out)
