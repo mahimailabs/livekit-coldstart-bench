@@ -45,8 +45,9 @@ later are meaningful there.
 4. **Cerebrium redeploy drained the call.** A 600 s hold call survived a redeploy triggered 58 s
    in: 599 ticks, last tick at 599.1 s, `survived: true`. The new version was live 21 s after the
    deploy started.
-5. **Modal cold start is about 4.4 s, and imports are half of it.** Container start takes 1.7 s
-   after `spawn`, then Python imports (livekit + livekit-agents) take 2.3 s. Memory snapshots
+5. **Modal cold start is about 4.4 s, and most of it is Modal's own startup.** p50 steps after
+   `spawn`: container start 1.73 s, Modal runtime and app load 1.85 s, agent imports (livekit +
+   livekit-agents) 0.46 s, connect 0.31 s, first audio 0.09 s. Memory snapshots
    save about 1.1 s light and 2.8 s heavy at p50. The p90s are noisy: snap light 6.2 s, heavy
    13.7 s. Each snapshot build cost about 8-9 s on its first two runs.
 6. **The Modal "warm" batch (gap 0) is not warm with this config.** Only 8/20 calls reused a
